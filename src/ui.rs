@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use crossterm::{cursor, style, terminal, QueueableCommand};
+use crossterm::{cursor, terminal, QueueableCommand};
 use std::io::{Stdout, Write};
 
 const WELCOME: &str = "🐢 Entering the exoshell…\n";
@@ -61,17 +61,9 @@ impl UI {
     }
 
     fn read_and_execute(&mut self) -> anyhow::Result<bool> {
-        use crate::prompt;
+        use crate::{prompt, status};
 
-        let (columns, rows) = terminal::size()?;
-        self.stdout
-            .queue(cursor::MoveTo(0, rows - 2))?
-            .queue(style::SetBackgroundColor(style::Color::DarkGreen))?;
-
-        for _ in 0..columns {
-            self.stdout.write_all(b"-")?;
-        }
-
+        status::display(&mut self.stdout)?;
         let command = prompt::read(&mut self.stdout, "$ ")?;
         if command == "exit" {
             Ok(false)
