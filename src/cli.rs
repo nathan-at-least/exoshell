@@ -1,3 +1,4 @@
+use crate::UI;
 use clap::Parser;
 
 /// A full-terminal interactive shell
@@ -7,5 +8,5 @@ pub struct Options {}
 
 pub fn run() -> anyhow::Result<()> {
     let _ = Options::parse();
-    todo!()
+    UI::new()?.run()
 }
