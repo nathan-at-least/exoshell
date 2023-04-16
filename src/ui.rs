@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use crossterm::tty::IsTty;
-use crossterm::{cursor, event, style, terminal, QueueableCommand};
+use crossterm::{cursor, style, terminal, QueueableCommand};
 use std::io::{Stdout, Write};
 
 pub struct UI {
@@ -69,6 +69,8 @@ impl UI {
     }
 
     fn read_and_execute(&mut self) -> anyhow::Result<bool> {
+        use crate::prompt;
+
         let (columns, rows) = terminal::size()?;
         self.stdout
             .queue(cursor::MoveTo(0, rows - 2))?
@@ -78,61 +80,13 @@ impl UI {
             self.stdout.write(b"-")?;
         }
 
-        self.stdout
-            .queue(style::SetBackgroundColor(style::Color::Reset))?
-            .queue(cursor::MoveTo(0, rows - 1))?
-            .write_all(b"prompt> ")?;
-        self.stdout.flush()?;
-
-        let command = self.read_prompt()?;
+        let command = prompt::read(&mut self.stdout, "$ ")?;
         if command == "exit" {
             Ok(false)
         } else {
             self.execute_command(command)?;
             Ok(true)
         }
-    }
-
-    fn read_prompt(&mut self) -> anyhow::Result<String> {
-        use event::{Event::Key, KeyEvent};
-
-        let mut response = String::new();
-
-        loop {
-            match event::read()? {
-                Key(KeyEvent {
-                    code,
-                    kind: event::KeyEventKind::Press,
-                    ..
-                    /*
-                    modifiers,
-                    state,
-                    */
-                }) => {
-                    use event::KeyCode::{Char, Enter};
-
-                    match code {
-                        Enter => {
-                            break;
-                        }
-                        Char(c) => {
-                            response.push(c);
-
-                            // Display it on screen:
-                            let mut bytes = [0u8; 4];
-                            c.encode_utf8(&mut bytes);
-                            self.stdout.write_all(&bytes[..c.len_utf8()])?;
-                            self.stdout.flush()?;
-                        }
-                        _ => {}
-                    }
-                }
-
-                _ => {}
-            }
-        }
-
-        Ok(response)
     }
 
     fn execute_command(&self, command: String) -> anyhow::Result<()> {
