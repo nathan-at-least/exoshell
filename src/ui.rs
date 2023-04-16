@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use crossterm::tty::IsTty;
 use crossterm::{cursor, style, terminal, QueueableCommand};
 use std::io::{Stdout, Write};
 
@@ -12,13 +11,8 @@ pub struct UI {
 
 impl UI {
     pub fn new() -> anyhow::Result<Self> {
-        let stdout = std::io::stdout();
-
-        if stdout.is_tty() {
-            Ok(UI { stdout })
-        } else {
-            Err(anyhow!("not a tty"))
-        }
+        let stdout = crate::tty::get()?;
+        Ok(UI { stdout })
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
