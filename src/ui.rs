@@ -3,6 +3,9 @@ use crossterm::tty::IsTty;
 use crossterm::{cursor, style, terminal, QueueableCommand};
 use std::io::{Stdout, Write};
 
+const WELCOME: &str = "🐢 Entering the exoshell…\n";
+const GOODBYE: &str = "🐢 Until next time! 👋\n";
+
 pub struct UI {
     stdout: Stdout,
 }
@@ -21,12 +24,13 @@ impl UI {
     pub fn run(&mut self) -> anyhow::Result<()> {
         let res = self.run_inner();
         if res.is_ok() {
-            self.stdout.write_all(b"Until next time!")?;
+            self.stdout.write_all(GOODBYE.as_bytes())?;
         }
         res
     }
 
     pub fn run_inner(&mut self) -> anyhow::Result<()> {
+        self.stdout.write_all(WELCOME.as_bytes())?;
         self.setup()?;
 
         let inner_res = self.read_execute_loop();
