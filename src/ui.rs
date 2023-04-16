@@ -69,7 +69,7 @@ impl UI {
             .queue(style::SetBackgroundColor(style::Color::DarkGreen))?;
 
         for _ in 0..columns {
-            self.stdout.write(b"-")?;
+            self.stdout.write_all(b"-")?;
         }
 
         let command = prompt::read(&mut self.stdout, "$ ")?;
