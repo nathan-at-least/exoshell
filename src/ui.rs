@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use crossterm::{cursor, terminal, QueueableCommand};
 use std::io::{Stdout, Write};
 
 const WELCOME: &str = "🐢 Entering the exoshell…\n";
@@ -25,33 +24,12 @@ impl UI {
 
     pub fn run_inner(&mut self) -> anyhow::Result<()> {
         use crate::cleanup::CleanupWith;
+        use crate::screen;
 
         self.stdout.write_all(WELCOME.as_bytes())?;
-        self.setup()?;
-        self.read_execute_loop().cleanup_with(self.exit())?;
-        Ok(())
-    }
-
-    fn setup(&mut self) -> anyhow::Result<()> {
-        use terminal::{Clear, ClearType::All, EnterAlternateScreen};
-
-        terminal::enable_raw_mode()?;
-
-        self.stdout
-            .queue(EnterAlternateScreen)?
-            .queue(Clear(All))?
-            .queue(cursor::SetCursorStyle::BlinkingBlock)?
-            .flush()?;
-        Ok(())
-    }
-
-    fn exit(&mut self) -> anyhow::Result<()> {
-        self.stdout
-            .queue(cursor::SetCursorStyle::DefaultUserShape)?
-            .queue(terminal::LeaveAlternateScreen)?
-            .flush()?;
-
-        terminal::disable_raw_mode()?;
+        screen::setup(&mut self.stdout)?;
+        self.read_execute_loop()
+            .cleanup_with(screen::exit(&mut self.stdout))?;
         Ok(())
     }
 

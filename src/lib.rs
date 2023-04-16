@@ -1,6 +1,7 @@
 mod cleanup;
 pub mod cli;
 mod prompt;
+mod screen;
 mod status;
 mod tty;
 mod ui;
