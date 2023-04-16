@@ -1,11 +1,10 @@
 use anyhow::anyhow;
 use crossterm::tty::IsTty;
-use crossterm::{cursor, style, terminal, QueueableCommand};
-use std::io::{Stdin, Stdout, Write};
+use crossterm::{cursor, event, style, terminal, QueueableCommand};
+use std::io::{Stdout, Write};
 
 pub struct UI {
     stdout: Stdout,
-    stdin: Stdin,
 }
 
 impl UI {
@@ -13,23 +12,22 @@ impl UI {
         let stdout = std::io::stdout();
 
         if stdout.is_tty() {
-            Ok(UI {
-                stdout,
-                stdin: std::io::stdin(),
-            })
+            Ok(UI { stdout })
         } else {
             Err(anyhow!("not a tty"))
         }
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
-        use terminal::{Clear, ClearType::All, EnterAlternateScreen};
+        let res = self.run_inner();
+        if res.is_ok() {
+            self.stdout.write_all(b"Until next time!")?;
+        }
+        res
+    }
 
-        self.stdout
-            .queue(EnterAlternateScreen)?
-            .queue(Clear(All))?
-            .queue(cursor::SetCursorStyle::BlinkingBlock)?
-            .flush()?;
+    pub fn run_inner(&mut self) -> anyhow::Result<()> {
+        self.setup()?;
 
         let inner_res = self.read_execute_loop();
         let outer_res = self.exit();
@@ -42,12 +40,26 @@ impl UI {
         }
     }
 
+    fn setup(&mut self) -> anyhow::Result<()> {
+        use terminal::{Clear, ClearType::All, EnterAlternateScreen};
+
+        terminal::enable_raw_mode()?;
+
+        self.stdout
+            .queue(EnterAlternateScreen)?
+            .queue(Clear(All))?
+            .queue(cursor::SetCursorStyle::BlinkingBlock)?
+            .flush()?;
+        Ok(())
+    }
+
     fn exit(&mut self) -> anyhow::Result<()> {
         self.stdout
             .queue(cursor::SetCursorStyle::DefaultUserShape)?
             .queue(terminal::LeaveAlternateScreen)?
             .flush()?;
-        self.stdout.write_all(b"Until next time!")?;
+
+        terminal::disable_raw_mode()?;
         Ok(())
     }
 
@@ -72,7 +84,7 @@ impl UI {
             .write_all(b"prompt> ")?;
         self.stdout.flush()?;
 
-        let command = self.read_line()?;
+        let command = self.read_prompt()?;
         if command == "exit" {
             Ok(false)
         } else {
@@ -81,13 +93,49 @@ impl UI {
         }
     }
 
-    fn read_line(&self) -> anyhow::Result<String> {
+    fn read_prompt(&mut self) -> anyhow::Result<String> {
+        use event::{Event::Key, KeyEvent};
+
         let mut response = String::new();
-        self.stdin.read_line(&mut response)?;
-        Ok(response.trim().to_string())
+
+        loop {
+            match event::read()? {
+                Key(KeyEvent {
+                    code,
+                    kind: event::KeyEventKind::Press,
+                    ..
+                    /*
+                    modifiers,
+                    state,
+                    */
+                }) => {
+                    use event::KeyCode::{Char, Enter};
+
+                    match code {
+                        Enter => {
+                            break;
+                        }
+                        Char(c) => {
+                            response.push(c);
+
+                            // Display it on screen:
+                            let mut bytes = [0u8; 4];
+                            c.encode_utf8(&mut bytes);
+                            self.stdout.write_all(&bytes[..c.len_utf8()])?;
+                            self.stdout.flush()?;
+                        }
+                        _ => {}
+                    }
+                }
+
+                _ => {}
+            }
+        }
+
+        Ok(response)
     }
 
     fn execute_command(&self, command: String) -> anyhow::Result<()> {
-        todo!("{:?}", command);
+        Err(anyhow!("execute_command({command:?}) not yet implemented"))
     }
 }
