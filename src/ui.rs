@@ -24,18 +24,12 @@ impl UI {
     }
 
     pub fn run_inner(&mut self) -> anyhow::Result<()> {
+        use crate::cleanup::CleanupWith;
+
         self.stdout.write_all(WELCOME.as_bytes())?;
         self.setup()?;
-
-        let inner_res = self.read_execute_loop();
-        let outer_res = self.exit();
-
-        match (inner_res, outer_res) {
-            (Ok(()), Ok(())) => Ok(()),
-            (inner, Ok(())) => inner,
-            (Ok(()), outer) => outer,
-            (Err(inner), Err(outer)) => Err(outer.context(format!("Original error: {inner:#}"))),
-        }
+        self.read_execute_loop().cleanup_with(self.exit())?;
+        Ok(())
     }
 
     fn setup(&mut self) -> anyhow::Result<()> {

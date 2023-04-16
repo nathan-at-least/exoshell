@@ -1,3 +1,4 @@
+mod cleanup;
 pub mod cli;
 mod prompt;
 mod tty;
