@@ -54,7 +54,9 @@ impl UI {
 
         status::display(&mut self.stdout)?;
         let command = prompt::read(&mut self.events, &mut self.stdout, "$ ").await?;
-        if command == "exit" {
+        if command.trim().is_empty() {
+            Ok(true)
+        } else if command == "exit" {
             Ok(false)
         } else {
             self.execute_command(command).await?;
