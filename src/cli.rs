@@ -1,3 +1,4 @@
+use crate::UI;
 use clap::Parser;
 
 /// A full-terminal interactive shell
@@ -5,7 +6,7 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 pub struct Options {}
 
-pub fn run() -> anyhow::Result<()> {
+pub async fn run() -> anyhow::Result<()> {
     let _ = Options::parse();
-    todo!()
+    UI::new()?.run().await
 }
