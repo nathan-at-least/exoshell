@@ -1,6 +1,7 @@
-use anyhow::anyhow;
 use crossterm::event::EventStream;
+use futures::stream::SelectAll;
 use std::io::{Stdout, Write};
+use tokio_childstream::ChildStream;
 
 const WELCOME: &str = "🐢 Entering the exoshell…\n";
 const GOODBYE: &str = "🐢 Until next time! 👋\n";
@@ -8,13 +9,19 @@ const GOODBYE: &str = "🐢 Until next time! 👋\n";
 pub struct UI {
     stdout: Stdout,
     events: EventStream,
+    childstreams: SelectAll<ChildStream>,
 }
 
 impl UI {
     pub fn new() -> anyhow::Result<Self> {
         let stdout = crate::tty::get()?;
         let events = EventStream::new();
-        Ok(UI { stdout, events })
+        let childstreams = SelectAll::default();
+        Ok(UI {
+            stdout,
+            events,
+            childstreams,
+        })
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
@@ -55,7 +62,18 @@ impl UI {
         }
     }
 
-    async fn execute_command(&self, command: String) -> anyhow::Result<()> {
-        Err(anyhow!("execute_command({command:?}) not yet implemented"))
+    async fn execute_command(&mut self, command: String) -> anyhow::Result<()> {
+        use crate::{prompt, Command};
+
+        match command.parse::<Command>() {
+            Ok(cmd) => {
+                let stream = cmd.spawn()?;
+                self.childstreams.push(stream);
+            }
+            Err(e) => {
+                prompt::display_prompt(&mut self.stdout, &format!("Error: {e}"))?;
+            }
+        }
+        Ok(())
     }
 }

@@ -40,7 +40,7 @@ pub(crate) async fn read(
     Ok(response)
 }
 
-fn display_prompt(stdout: &mut Stdout, prompt: &str) -> anyhow::Result<()> {
+pub(crate) fn display_prompt(stdout: &mut Stdout, prompt: &str) -> anyhow::Result<()> {
     use crossterm::{cursor, style, terminal, QueueableCommand};
 
     let (_, rows) = terminal::size()?;
